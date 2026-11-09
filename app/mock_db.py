@@ -11,12 +11,12 @@ router = APIRouter(prefix="/mock-db", tags=["mock-db"])
 # Fictional sample data.
 PEOPLE = {
     "3520112345671": {
-        "name": "M Shayan Jameel Mirza",
-        "father_name": "Jameel Khaliq Mirza",
-        "cnic": "42101-1389680-1",
-        "dob": "08.07.2001",
-        "issue_date": "20.02.2020",
-        "expiry_date": "20.02.2030",
+        "name": "Shayan",
+        "father_name": "shayan",
+        "cnic": "11111-1234561-1",
+        "dob": "01.01.2000",
+        "issue_date": "01.02.2020",
+        "expiry_date": "01.02.2030",
     }
 }
 
