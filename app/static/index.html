@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNIC Verification</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1c1f23; --muted: #6b7280; --line: #e4e2da;
+    --accent: #0f5c4d; --accent-ink: #ffffff;
+    --ok: #166534; --ok-bg: #dcfce7; --warn: #92400e; --warn-bg: #fef3c7;
+    --bad: #991b1b; --bad-bg: #fee2e2; --neutral-bg: #eceae3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --panel: #1c2024; --ink: #eceff1; --muted: #9aa3ad; --line: #2c3238;
+      --accent: #3fb59b; --accent-ink: #0b1512;
+      --ok: #86efac; --ok-bg: #12331f; --warn: #fcd34d; --warn-bg: #3a2c0c;
+      --bad: #fca5a5; --bad-bg: #3b1616; --neutral-bg: #262b30;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  label.lbl { display: block; font-weight: 600; margin-bottom: 6px; }
+  .drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center;
+          cursor: pointer; min-height: 150px; display: flex; flex-direction: column; align-items: center;
+          justify-content: center; gap: 8px; transition: border-color .15s, background .15s; }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--neutral-bg); }
+  .drop img { max-width: 100%; max-height: 140px; border-radius: 6px; }
+  .drop small { color: var(--muted); }
+  input[type=file] { display: none; }
+  select, input[type=text] { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
+          background: var(--panel); color: var(--ink); font: inherit; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  button { background: var(--accent); color: var(--accent-ink); border: 0; padding: 11px 20px; border-radius: 8px;
+           font: inherit; font-weight: 600; cursor: pointer; margin-top: 18px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .status { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+  .s-match, .s-genuine { background: var(--ok-bg); color: var(--ok); }
+  .s-partial, .s-review, .s-uncertain, .s-missing_extracted, .s-missing_db { background: var(--warn-bg); color: var(--warn); }
+  .s-mismatch, .s-reject, .s-forged { background: var(--bad-bg); color: var(--bad); }
+  .s-unavailable, .s-not_compared { background: var(--neutral-bg); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  td.f { font-weight: 600; white-space: nowrap; }
+  .banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .banner h2 { margin: 0; font-size: 18px; }
+  .warn { background: var(--warn-bg); color: var(--warn); padding: 10px 12px; border-radius: 8px; margin-top: 10px; }
+  .meter { height: 10px; background: var(--neutral-bg); border-radius: 999px; position: relative; margin: 12px 0 4px; }
+  .meter > i { position: absolute; top: 0; left: 0; bottom: 0; border-radius: 999px; background: var(--accent); }
+  .meter > b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+  .sigimg { background: #fff; border: 1px solid var(--line); border-radius: 8px; max-width: 100%; max-height: 120px; }
+  .muted { color: var(--muted); }
+  details { margin-top: 12px; } summary { cursor: pointer; color: var(--muted); }
+  pre { white-space: pre-wrap; background: var(--neutral-bg); padding: 10px; border-radius: 8px; font-size: 12.5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--muted); }
+  .dot.on { background: var(--ok); }
+</style>
+</head>
+<body>
+<main>
+  <h1>CNIC verification</h1>
+  <p class="sub">Upload a CNIC and a specimen signature. The app reads the card, checks it against the database, and compares the signatures.</p>
+
+  <form id="form" class="card">
+    <div class="grid">
+      <div>
+        <label class="lbl">CNIC image</label>
+        <label class="drop" id="drop-cnic">
+          <span id="cnic-prompt">Click or drop an image</span>
+          <small>JPG, PNG or WEBP, up to 10 MB</small>
+          <input type="file" id="cnic" accept="image/*">
+        </label>
+      </div>
+      <div>
+        <label class="lbl">Specimen signature image</label>
+        <label class="drop" id="drop-sig">
+          <span id="sig-prompt">Click or drop an image</span>
+          <small>Dark ink on a plain background works best</small>
+          <input type="file" id="sig" accept="image/*">
+        </label>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label class="lbl" for="model">OCR model</label>
+        <select id="model"></select>
+        <div class="hint" id="model-hint"></div>
+      </div>
+      <div>
+        <label class="lbl" for="override">CNIC number (optional)</label>
+        <input type="text" id="override" placeholder="35201-1234567-1" inputmode="numeric">
+        <div class="hint">Use this to look up the record if the card number is unreadable.</div>
+      </div>
+    </div>
+    <button type="submit" id="go">Verify</button>
+    <span id="busy" class="muted" hidden> Working. A 7B vision model can take up to a minute.</span>
+  </form>
+
+  <div id="error" class="warn" hidden></div>
+  <div id="result" hidden></div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LABELS = {
+  name: "Name", father_husband_name: "Father / husband name", cnic_number: "CNIC number", address: "Address",
+  date_of_birth: "Date of birth", date_of_issue: "Date of issue", date_of_expiry: "Date of expiry"
+};
+const STATUS_TEXT = {
+  match: "Match", partial: "Close", mismatch: "Mismatch", missing_extracted: "Not read from card",
+  missing_db: "Not in database", genuine: "Genuine", uncertain: "Uncertain", forged: "Likely forged",
+  review: "Needs review", reject: "Reject", unavailable: "Unavailable", not_compared: "Not compared"
+};
+const pill = (s) => `<span class="status s-${s}">${esc(STATUS_TEXT[s] || s)}</span>`;
+
+// uploads
+function wireDrop(inputId, dropId, promptId) {
+  const input = $(inputId), drop = $(dropId);
+  const show = () => {
+    const f = input.files[0]; if (!f) return;
+    drop.querySelector("img")?.remove();
+    const img = document.createElement("img"); img.src = URL.createObjectURL(f);
+    drop.prepend(img); $(promptId).textContent = f.name;
+  };
+  input.addEventListener("change", show);
+  ["dragover", "dragenter"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", ev => { if (ev.dataTransfer.files.length) { input.files = ev.dataTransfer.files; show(); } });
+}
+wireDrop("cnic", "drop-cnic", "cnic-prompt");
+wireDrop("sig", "drop-sig", "sig-prompt");
+
+// models
+async function loadModels() {
+  try {
+    const r = await (await fetch("/api/models")).json();
+    $("model").innerHTML = r.models.map(m =>
+      `<option value="${esc(m.id)}" ${m.default ? "selected" : ""}>${esc(m.id)}${m.loaded_in_lmstudio ? "" : " (not loaded)"}</option>`).join("");
+    $("model-hint").innerHTML = `<span class="dot ${r.lmstudio_reachable ? "on" : ""}"></span>` +
+      (r.lmstudio_reachable ? "LM Studio connected" : "LM Studio not reachable. Start its local server.");
+  } catch { $("model-hint").textContent = "Could not load models."; }
+}
+loadModels();
+
+// submit
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("error").hidden = true; $("result").hidden = true;
+  if (!$("cnic").files[0] || !$("sig").files[0]) { return showError("Please choose both a CNIC image and a signature image."); }
+  const fd = new FormData();
+  fd.append("cnic_image", $("cnic").files[0]);
+  fd.append("signature_image", $("sig").files[0]);
+  fd.append("model", $("model").value);
+  if ($("override").value.trim()) fd.append("cnic_override", $("override").value.trim());
+  $("go").disabled = true; $("busy").hidden = false;
+  try {
+    const res = await fetch("/api/verify", { method: "POST", body: fd });
+    const body = await res.json();
+    if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    render(body);
+  } catch (err) { showError(err.message); }
+  finally { $("go").disabled = false; $("busy").hidden = true; }
+});
+
+function showError(msg) { $("error").textContent = msg; $("error").hidden = false; }
+
+function render(d) {
+  const c = d.comparison, s = d.signature;
+  const rows = c.fields.length
+    ? c.fields.map(f => `<tr><td class="f">${esc(LABELS[f.field] || f.field)}</td>
+        <td>${esc(f.extracted) || '<span class="muted">-</span>'}</td>
+        <td>${esc(f.expected) || '<span class="muted">-</span>'}</td>
+        <td>${pill(f.status)}${f.score != null && f.status !== "match" ? ` <span class="muted">${f.score}</span>` : ""}</td></tr>`).join("")
+    : "";
+  const ocrRows = (!c.fields.length && d.ocr)
+    ? Object.entries(d.ocr.fields).map(([k, v]) => `<tr><td class="f">${esc(LABELS[k] || k)}</td><td>${esc(v) || '<span class="muted">-</span>'}</td><td colspan="2"></td></tr>`).join("") : "";
+
+  const pct = s.score != null ? Math.max(0, Math.min(1, s.score)) * 100 : 0;
+  const meter = s.score != null ? `
+    <div class="meter"><i style="width:${pct}%"></i><b style="left:${s.threshold * 100}%"></b></div>
+    <div class="hint">Similarity ${s.score.toFixed(3)}. The marker is the genuine threshold (${s.threshold}).</div>` : "";
+  const crop = s.cropped_signature_png_b64
+    ? `<div style="margin-top:10px"><div class="hint">Signature region read from the card</div>
+       <img class="sigimg" src="data:image/png;base64,${s.cropped_signature_png_b64}"></div>` : "";
+
+  $("result").innerHTML = `
+    <div class="card">
+      <div class="banner"><h2>Data check</h2>${pill(c.verdict)}</div>
+      <div class="muted">${esc(c.reason)}</div>
+      <table><thead><tr><th>Field</th><th>Read from card</th><th>Database</th><th>Result</th></tr></thead>
+      <tbody>${rows || ocrRows}</tbody></table>
+    </div>
+    <div class="card">
+      <div class="banner"><h2>Signature</h2>${pill(s.verdict)}</div>
+      ${s.message ? `<div class="muted">${esc(s.message)}</div>` : ""}
+      ${meter}${crop}
+    </div>
+    ${d.warnings.map(w => `<div class="warn">${esc(w)}</div>`).join("")}
+    <details><summary>Details</summary>
+      <pre>${esc(JSON.stringify({ timings: d.timings, model: d.ocr?.model, raw_model_output: d.ocr?.raw_text }, null, 2))}</pre>
+    </details>`;
+  $("result").hidden = false;
+  $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+</script>
+</body>
+</html>
